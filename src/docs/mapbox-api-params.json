@@ -1,0 +1,179 @@
+{
+  "description": "Parámetros enviados a la API de Mapbox para el sistema de rutas y tracking GPS",
+  "version": "1.0.0",
+  "lastUpdated": "2024",
+  
+  "directions_api": {
+    "endpoint": "https://api.mapbox.com/directions/v5/mapbox/{profile}/{coordinates}",
+    "method": "GET",
+    "description": "Obtiene la ruta óptima entre múltiples puntos para el recorrido del bus",
+    
+    "path_params": {
+      "profile": {
+        "type": "string",
+        "required": true,
+        "options": ["driving", "walking", "cycling", "driving-traffic"],
+        "default": "driving",
+        "description": "Perfil de transporte. Para buses escolares se usa 'driving'"
+      },
+      "coordinates": {
+        "type": "string",
+        "required": true,
+        "format": "lng1,lat1;lng2,lat2;lng3,lat3;...",
+        "example": "-74.0721,4.7110;-74.0650,4.7050;-74.0580,4.7000",
+        "description": "Lista de coordenadas separadas por punto y coma. El orden determina la ruta"
+      }
+    },
+    
+    "query_params": {
+      "geometries": {
+        "type": "string",
+        "required": true,
+        "options": ["geojson", "polyline", "polyline6"],
+        "default": "geojson",
+        "description": "Formato de la geometría de la ruta retornada"
+      },
+      "overview": {
+        "type": "string",
+        "required": false,
+        "options": ["full", "simplified", "false"],
+        "default": "full",
+        "description": "Nivel de detalle de la geometría de la ruta"
+      },
+      "access_token": {
+        "type": "string",
+        "required": true,
+        "description": "Token público de autenticación de Mapbox"
+      },
+      "steps": {
+        "type": "boolean",
+        "required": false,
+        "default": false,
+        "description": "Si incluir instrucciones de navegación paso a paso"
+      },
+      "annotations": {
+        "type": "string",
+        "required": false,
+        "options": ["distance", "duration", "speed", "congestion"],
+        "description": "Anotaciones adicionales para cada segmento de la ruta"
+      }
+    },
+    
+    "example_request": {
+      "url": "https://api.mapbox.com/directions/v5/mapbox/driving/-74.0721,4.7110;-74.0650,4.7050;-74.0580,4.7000?geometries=geojson&overview=full&access_token=pk.xxx",
+      "description": "Obtiene ruta desde la sede a través de 2 puntos de recogida de estudiantes"
+    }
+  },
+  
+  "marker_api": {
+    "class": "mapboxgl.Marker",
+    "description": "API para crear y manipular marcadores en el mapa",
+    
+    "constructor_options": {
+      "element": {
+        "type": "HTMLElement",
+        "required": false,
+        "description": "Elemento HTML personalizado para el marcador"
+      },
+      "anchor": {
+        "type": "string",
+        "required": false,
+        "options": ["center", "top", "bottom", "left", "right", "top-left", "top-right", "bottom-left", "bottom-right"],
+        "default": "center",
+        "description": "Punto de anclaje del marcador relativo al icono"
+      },
+      "offset": {
+        "type": "[number, number]",
+        "required": false,
+        "format": "[x, y]",
+        "description": "Desplazamiento en píxeles desde el punto de anclaje"
+      },
+      "rotation": {
+        "type": "number",
+        "required": false,
+        "unit": "degrees",
+        "description": "Rotación del marcador en grados"
+      },
+      "color": {
+        "type": "string",
+        "required": false,
+        "description": "Color del marcador por defecto (si no se usa elemento personalizado)"
+      }
+    },
+    
+    "methods": {
+      "setLngLat": {
+        "params": "[lng: number, lat: number]",
+        "returns": "Marker",
+        "description": "Actualiza la posición del marcador. USADO PARA TRACKING GPS"
+      },
+      "getLngLat": {
+        "params": "void",
+        "returns": "LngLat",
+        "description": "Obtiene la posición actual del marcador"
+      },
+      "addTo": {
+        "params": "map: Map",
+        "returns": "Marker",
+        "description": "Añade el marcador a un mapa"
+      },
+      "remove": {
+        "params": "void",
+        "returns": "Marker",
+        "description": "Elimina el marcador del mapa"
+      },
+      "setPopup": {
+        "params": "popup: Popup",
+        "returns": "Marker",
+        "description": "Asocia un popup al marcador"
+      }
+    },
+    
+    "gps_tracking_usage": {
+      "description": "Para actualizar la posición del bus en tiempo real",
+      "example": "busMarker.setLngLat([currentPosition.lng, currentPosition.lat])",
+      "update_frequency": "100ms (10 FPS)",
+      "note": "El método setLngLat actualiza inmediatamente la posición visual del marcador"
+    }
+  },
+  
+  "gps_simulation_params": {
+    "description": "Parámetros usados en la simulación GPS del bus",
+    
+    "config": {
+      "speedKmh": {
+        "type": "number",
+        "default": 50,
+        "unit": "km/h",
+        "description": "Velocidad del bus en kilómetros por hora"
+      },
+      "updateIntervalMs": {
+        "type": "number",
+        "default": 100,
+        "unit": "milliseconds",
+        "description": "Intervalo entre actualizaciones de posición (100ms = 10 FPS)"
+      },
+      "distancePerInterval": {
+        "formula": "(speedKmh / 3.6) * (updateIntervalMs / 1000)",
+        "example": "(50 / 3.6) * 0.1 = 1.389 metros",
+        "description": "Distancia que recorre el bus en cada intervalo"
+      }
+    },
+    
+    "position_update_payload": {
+      "currentPosition": {
+        "lng": "number - Longitud actual",
+        "lat": "number - Latitud actual",
+        "timestamp": "number - Unix timestamp de la actualización"
+      },
+      "heading": "number - Dirección en grados (0-360, 0 = Norte)",
+      "speed": "number - Velocidad actual en km/h",
+      "progress": "number - Porcentaje de ruta completada (0-100)",
+      "distanceTraveled": "number - Metros recorridos",
+      "totalDistance": "number - Distancia total de la ruta en metros",
+      "isMoving": "boolean - Si el bus está en movimiento",
+      "currentSegmentIndex": "number - Índice del segmento actual de la ruta",
+      "segmentProgress": "number - Progreso dentro del segmento (0-1)"
+    }
+  }
+}

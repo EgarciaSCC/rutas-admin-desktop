@@ -1,0 +1,414 @@
+{
+  "description": "Especificación de API REST del backend para el módulo de rutas y tracking GPS",
+  "version": "1.0.0",
+  "baseUrl": "/api/v1",
+  "lastUpdated": "2024",
+  
+  "endpoints": {
+    "gps_tracking": {
+      "send_position": {
+        "method": "POST",
+        "path": "/tracking/position",
+        "description": "Envía la posición actual del bus al servidor para almacenamiento y broadcast",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer {access_token}"
+        },
+        "request": {
+          "busId": {
+            "type": "string",
+            "required": true,
+            "description": "ID único del bus"
+          },
+          "rutaId": {
+            "type": "string",
+            "required": true,
+            "description": "ID de la ruta activa"
+          },
+          "position": {
+            "type": "object",
+            "required": true,
+            "properties": {
+              "lng": "number - Longitud",
+              "lat": "number - Latitud",
+              "timestamp": "number - Unix timestamp en milliseconds"
+            }
+          },
+          "heading": {
+            "type": "number",
+            "required": true,
+            "description": "Dirección del bus en grados (0-360)"
+          },
+          "speed": {
+            "type": "number",
+            "required": true,
+            "unit": "km/h",
+            "description": "Velocidad actual del bus"
+          },
+          "progress": {
+            "type": "number",
+            "required": true,
+            "description": "Porcentaje de ruta completada (0-100)"
+          },
+          "distanceTraveled": {
+            "type": "number",
+            "required": true,
+            "unit": "meters",
+            "description": "Distancia total recorrida"
+          }
+        },
+        "response_success": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "message": "Posición registrada correctamente",
+            "data": {
+              "id": "uuid - ID del registro de posición",
+              "receivedAt": "ISO8601 timestamp"
+            }
+          }
+        },
+        "response_error": {
+          "status": 400,
+          "body": {
+            "success": false,
+            "error": "INVALID_COORDINATES",
+            "message": "Las coordenadas proporcionadas no son válidas"
+          }
+        }
+      },
+      
+      "get_current_position": {
+        "method": "GET",
+        "path": "/tracking/position/{busId}",
+        "description": "Obtiene la última posición conocida de un bus",
+        "params": {
+          "busId": "string - ID del bus"
+        },
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "data": {
+              "busId": "string",
+              "rutaId": "string",
+              "position": {
+                "lng": "number",
+                "lat": "number",
+                "timestamp": "number"
+              },
+              "heading": "number",
+              "speed": "number",
+              "progress": "number",
+              "lastUpdate": "ISO8601 timestamp"
+            }
+          }
+        }
+      },
+      
+      "get_position_history": {
+        "method": "GET",
+        "path": "/tracking/history/{busId}",
+        "description": "Obtiene el historial de posiciones de un bus en un rango de tiempo",
+        "params": {
+          "busId": "string - ID del bus"
+        },
+        "query": {
+          "startDate": "ISO8601 - Fecha de inicio",
+          "endDate": "ISO8601 - Fecha de fin",
+          "limit": "number - Máximo de registros (default: 1000)"
+        },
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "data": {
+              "busId": "string",
+              "positions": [
+                {
+                  "position": { "lng": "number", "lat": "number" },
+                  "heading": "number",
+                  "speed": "number",
+                  "timestamp": "number"
+                }
+              ],
+              "totalRecords": "number"
+            }
+          }
+        }
+      }
+    },
+    
+    "routes": {
+      "get_all": {
+        "method": "GET",
+        "path": "/rutas",
+        "description": "Obtiene todas las rutas",
+        "query": {
+          "estado": "string - Filtrar por estado (activa/inactiva)",
+          "sedeId": "string - Filtrar por sede",
+          "page": "number - Página (default: 1)",
+          "limit": "number - Registros por página (default: 20)"
+        },
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "data": {
+              "rutas": "[Ruta[]]",
+              "pagination": {
+                "page": "number",
+                "limit": "number",
+                "total": "number",
+                "totalPages": "number"
+              }
+            }
+          }
+        }
+      },
+      
+      "get_by_id": {
+        "method": "GET",
+        "path": "/rutas/{id}",
+        "description": "Obtiene una ruta por ID",
+        "params": {
+          "id": "string - ID de la ruta"
+        },
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "data": {
+              "id": "string",
+              "nombre": "string",
+              "estado": "activa | inactiva",
+              "sedeId": "string",
+              "busId": "string",
+              "conductorId": "string",
+              "coordinadorId": "string",
+              "estudiantes": "string[]",
+              "horaInicio": "string (HH:mm)",
+              "horaFin": "string (HH:mm)",
+              "diasOperacion": "string[]"
+            }
+          }
+        }
+      },
+      
+      "create": {
+        "method": "POST",
+        "path": "/rutas",
+        "description": "Crea una nueva ruta",
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer {access_token}"
+        },
+        "request": {
+          "nombre": "string - Nombre de la ruta",
+          "sedeId": "string - ID de la sede de destino",
+          "busId": "string - ID del bus asignado",
+          "conductorId": "string - ID del conductor",
+          "coordinadorId": "string - ID del coordinador",
+          "estudiantes": "string[] - IDs de estudiantes asignados",
+          "horaInicio": "string - Hora de inicio (HH:mm)",
+          "horaFin": "string - Hora estimada de llegada (HH:mm)",
+          "diasOperacion": "string[] - Días de operación (Lunes, Martes, etc.)"
+        },
+        "response_success": {
+          "status": 201,
+          "body": {
+            "success": true,
+            "message": "Ruta creada exitosamente",
+            "data": {
+              "id": "uuid generado",
+              "nombre": "string",
+              "estado": "activa"
+            }
+          }
+        }
+      },
+      
+      "update": {
+        "method": "PUT",
+        "path": "/rutas/{id}",
+        "description": "Actualiza una ruta existente",
+        "params": {
+          "id": "string - ID de la ruta"
+        },
+        "request": "Mismos campos que create (parciales permitidos)",
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "message": "Ruta actualizada exitosamente"
+          }
+        }
+      },
+      
+      "delete": {
+        "method": "DELETE",
+        "path": "/rutas/{id}",
+        "description": "Elimina una ruta",
+        "params": {
+          "id": "string - ID de la ruta"
+        },
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "message": "Ruta eliminada exitosamente"
+          }
+        }
+      }
+    },
+    
+    "novedades": {
+      "create": {
+        "method": "POST",
+        "path": "/novedades",
+        "description": "Crea una novedad para una ruta",
+        "request": {
+          "rutaId": "string - ID de la ruta",
+          "tipo": "retraso | accidente | desvio | otro",
+          "descripcion": "string - Descripción de la novedad",
+          "prioridad": "baja | media | alta",
+          "ubicacion": {
+            "type": "object",
+            "properties": {
+              "lng": "number",
+              "lat": "number"
+            }
+          }
+        },
+        "response": {
+          "status": 201,
+          "body": {
+            "success": true,
+            "data": {
+              "id": "uuid",
+              "createdAt": "ISO8601"
+            }
+          }
+        }
+      },
+      
+      "get_by_ruta": {
+        "method": "GET",
+        "path": "/novedades/ruta/{rutaId}",
+        "description": "Obtiene las novedades de una ruta",
+        "params": {
+          "rutaId": "string"
+        },
+        "query": {
+          "startDate": "ISO8601 - Fecha de inicio",
+          "endDate": "ISO8601 - Fecha de fin"
+        },
+        "response": {
+          "status": 200,
+          "body": {
+            "success": true,
+            "data": "[Novedad[]]"
+          }
+        }
+      }
+    },
+    
+    "websocket": {
+      "connection": {
+        "url": "wss://api.example.com/ws/tracking",
+        "description": "Conexión WebSocket para actualizaciones en tiempo real",
+        "auth": "Token enviado como query param: ?token={access_token}"
+      },
+      
+      "events": {
+        "bus_position_update": {
+          "direction": "server -> client",
+          "description": "Actualización de posición del bus en tiempo real",
+          "payload": {
+            "event": "bus_position_update",
+            "data": {
+              "busId": "string",
+              "rutaId": "string",
+              "position": { "lng": "number", "lat": "number" },
+              "heading": "number",
+              "speed": "number",
+              "progress": "number",
+              "timestamp": "number"
+            }
+          }
+        },
+        
+        "subscribe_route": {
+          "direction": "client -> server",
+          "description": "Suscribirse a actualizaciones de una ruta específica",
+          "payload": {
+            "event": "subscribe_route",
+            "data": {
+              "rutaId": "string"
+            }
+          }
+        },
+        
+        "unsubscribe_route": {
+          "direction": "client -> server",
+          "description": "Cancelar suscripción a una ruta",
+          "payload": {
+            "event": "unsubscribe_route",
+            "data": {
+              "rutaId": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  
+  "data_models": {
+    "Ruta": {
+      "id": "string - UUID",
+      "nombre": "string",
+      "estado": "activa | inactiva",
+      "sedeId": "string - FK a Sede",
+      "busId": "string - FK a Bus",
+      "conductorId": "string - FK a Conductor",
+      "coordinadorId": "string - FK a Coordinador",
+      "estudiantes": "string[] - Array de IDs de estudiantes",
+      "horaInicio": "string - Formato HH:mm",
+      "horaFin": "string - Formato HH:mm",
+      "diasOperacion": "string[]",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
+    },
+    
+    "GPSPosition": {
+      "id": "string - UUID",
+      "busId": "string - FK a Bus",
+      "rutaId": "string - FK a Ruta",
+      "position": {
+        "lng": "number",
+        "lat": "number"
+      },
+      "heading": "number - grados 0-360",
+      "speed": "number - km/h",
+      "progress": "number - porcentaje 0-100",
+      "distanceTraveled": "number - metros",
+      "timestamp": "number - Unix timestamp ms",
+      "createdAt": "ISO8601"
+    },
+    
+    "Novedad": {
+      "id": "string - UUID",
+      "rutaId": "string - FK a Ruta",
+      "tipo": "retraso | accidente | desvio | otro",
+      "descripcion": "string",
+      "prioridad": "baja | media | alta",
+      "ubicacion": {
+        "lng": "number",
+        "lat": "number"
+      },
+      "resuelta": "boolean",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
+    }
+  }
+}

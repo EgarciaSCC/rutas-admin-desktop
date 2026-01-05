@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* NexusCore Académico Brand Colors */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 15%;
+
+    /* Primary - Red Coral */
+    --primary: 356 97% 64%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Light gray/pink */
+    --secondary: 356 100% 97%;
+    --secondary-foreground: 356 97% 64%;
+
+    /* Muted */
+    --muted: 210 20% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    /* Accent - Purple */
+    --accent: 262 94% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders */
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 356 97% 64%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 40%;
+    --sidebar-primary: 356 97% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 356 100% 97%;
+    --sidebar-accent-foreground: 356 97% 64%;
+    --sidebar-border: 0 0% 94%;
+    --sidebar-ring: 356 97% 64%;
+
+    /* Extended palette */
+    --nexus-red-50: 356 100% 97%;
+    --nexus-red-100: 356 100% 93%;
+    --nexus-red-200: 356 100% 87%;
+    --nexus-red-300: 356 100% 80%;
+    --nexus-red-400: 356 97% 73%;
+    --nexus-red-500: 356 97% 64%;
+    --nexus-red-600: 356 90% 55%;
+    --nexus-red-700: 356 85% 47%;
+    --nexus-red-800: 356 80% 40%;
+    --nexus-red-900: 356 75% 33%;
+
+    --nexus-purple-50: 262 100% 97%;
+    --nexus-purple-100: 262 95% 93%;
+    --nexus-purple-200: 262 90% 85%;
+    --nexus-purple-300: 262 85% 75%;
+    --nexus-purple-400: 262 85% 65%;
+    --nexus-purple-500: 262 94% 50%;
+    --nexus-purple-600: 262 90% 42%;
+    --nexus-purple-700: 262 85% 35%;
+    --nexus-purple-800: 262 80% 28%;
+    --nexus-purple-900: 262 75% 20%;
+
+    --nexus-yellow-50: 45 100% 97%;
+    --nexus-yellow-100: 45 100% 93%;
+    --nexus-yellow-200: 45 100% 87%;
+    --nexus-yellow-300: 45 100% 78%;
+    --nexus-yellow-400: 45 100% 70%;
+    --nexus-yellow-500: 45 100% 70%;
+
+    --nexus-gray-50: 0 0% 91%;
+    --nexus-gray-100: 0 0% 83%;
+    --nexus-gray-200: 0 0% 75%;
+    --nexus-gray-300: 0 0% 66%;
+    --nexus-gray-400: 0 0% 58%;
+    --nexus-gray-500: 0 0% 49%;
+    --nexus-gray-600: 0 0% 40%;
+    --nexus-gray-700: 0 0% 32%;
+    --nexus-gray-800: 0 0% 24%;
+    --nexus-gray-900: 0 0% 15%;
+
+    /* Success */
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 356 97% 64%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 356 30% 20%;
+    --secondary-foreground: 356 97% 64%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 262 94% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 356 97% 64%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 70%;
+    --sidebar-primary: 356 97% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 356 97% 64%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 356 97% 64%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
