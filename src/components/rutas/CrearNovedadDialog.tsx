@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Ruta, apiResponses } from '@/services/mockData';
+import { Ruta } from '@/services/types';
+import apiClient from '@/services/apiClient';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +47,7 @@ const CrearNovedadDialog = ({ rutas, open, onOpenChange }: CrearNovedadDialogPro
     setLoading(true);
     try {
       const requiereAprobacion = categoriasQueRequierenAprobacion.includes(categoria);
-      await apiResponses.createNovedad({
+      const result = await apiClient.createNovedad({
         rutaId,
         titulo,
         mensaje,
@@ -58,7 +59,11 @@ const CrearNovedadDialog = ({ rutas, open, onOpenChange }: CrearNovedadDialogPro
         rolCreador: 'administrador',
       });
       
-      toast.success('Novedad creada y notificación enviada');
+      if (result.success) {
+        toast.success('Novedad creada y notificación enviada');
+      } else {
+        toast.error(result.error || 'Error al crear la novedad');
+      }
       setRutaId('');
       setTitulo('');
       setMensaje('');

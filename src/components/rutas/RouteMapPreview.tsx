@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Estudiante, Sede } from '@/services/mockData';
+import { Estudiante, Sede } from '@/services/types';
 import { MapPin, AlertCircle } from 'lucide-react';
 import { MAPBOX_CONFIG } from '@/config/mapbox';
 

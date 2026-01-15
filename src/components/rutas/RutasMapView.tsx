@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { Ruta, Bus, Conductor, Sede, sedes, buses, conductores, estudiantes as allEstudiantes } from '@/services/mockData';
+import { Ruta, Bus, Conductor, Sede, Estudiante } from '@/services/types';
+import { fallbackGetSedes, fallbackGetBuses, fallbackGetConductores, fallbackGetEstudiantes } from '@/services/apiClient';
 import { MAPBOX_CONFIG } from '@/config/mapbox';
 import { AlertCircle, Bus as BusIcon, Users, Clock, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,11 @@ const RutasMapView = ({ rutas }: RutasMapViewProps) => {
   const [error, setError] = useState('');
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
   const [gpsState, setGpsState] = useState<GPSSimulationState | null>(null);
+  // Local data loaded from API (or mocks fallback)
+  const [sedes, setSedes] = useState<Sede[]>([]);
+  const [buses, setBuses] = useState<Bus[]>([]);
+  const [conductores, setConductores] = useState<Conductor[]>([]);
+  const [allEstudiantes, setAllEstudiantes] = useState<Estudiante[]>([]);
 
   const rutasActivas = rutas.filter(r => r.estado === 'activa');
 
@@ -457,7 +462,7 @@ const RutasMapView = ({ rutas }: RutasMapViewProps) => {
     if (mapLoaded) {
       updateMarkers();
     }
-  }, [rutas, mapLoaded]);
+  }, [rutas, mapLoaded, sedes]);
 
   useEffect(() => {
     return () => {

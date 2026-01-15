@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Plus, Bus as BusIcon } from "lucide-react";
-import { Bus, Sede } from "@/services/mockData";
+import { Bus, Sede } from "@/services/types";
 
 interface Step1FormProps {
   formData: {

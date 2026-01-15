@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { FileText, UserPlus } from "lucide-react";
-import { Conductor, Coordinador } from "@/services/mockData";
+import { Conductor, Coordinador } from "@/services/types";
 
 interface Step2FormProps {
   conductores: Conductor[];

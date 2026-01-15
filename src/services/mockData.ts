@@ -51,6 +51,22 @@ export interface Estudiante {
   asignado: boolean;
 }
 
+export interface ParadaTemporal {
+  id: string;
+  estudianteId: string;
+  direccion: string;
+  lat: number;
+  lng: number;
+  motivo: string;
+  creadoPor: string;
+  rolCreador: 'conductor' | 'coordinador';
+  createdAt: string;
+  expiraAt: string; // 24h después de creación
+  estado: 'pendiente' | 'aprobada' | 'rechazada' | 'expirada';
+  aprobadoPor?: string;
+  fechaAprobacion?: string;
+}
+
 export interface Ruta {
   id: string;
   nombre: string;
@@ -59,6 +75,7 @@ export interface Ruta {
   coordinadorId: string;
   sedeId: string;
   estudiantes: string[];
+  paradasTemporales?: ParadaTemporal[];
   estado: 'activa' | 'inactiva';
   createdAt: string;
 }
@@ -190,6 +207,21 @@ export const rutas: Ruta[] = [
     coordinadorId: '3',
     sedeId: '1',
     estudiantes: ['1', '2', '3', '4', '5'],
+    paradasTemporales: [
+       {
+         id: 'pt-1',
+         estudianteId: '1',
+         direccion: 'Calle 130 # 20-45, Edificio Torres del Norte',
+         lat: 4.7150,
+         lng: -74.0600,
+         motivo: 'El estudiante estará temporalmente en casa de los abuelos esta semana',
+         creadoPor: 'María Elena Gómez',
+         rolCreador: 'coordinador',
+         createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // hace 2 horas
+         expiraAt: new Date(Date.now() + 22 * 60 * 60 * 1000).toISOString(), // expira en 22 horas
+         estado: 'pendiente'
+       }
+    ],
     estado: 'activa',
     createdAt: '2024-01-15'
   },
@@ -201,6 +233,21 @@ export const rutas: Ruta[] = [
     coordinadorId: '1', 
     sedeId: '2',
     estudiantes: ['6', '7', '8'],
+    paradasTemporales: [
+      {
+        id: 'pt-2',
+        estudianteId: '7',
+        direccion: 'Carrera 15 # 85-30, Apartamento 502',
+        lat: 4.6680,
+        lng: -74.0520,
+        motivo: 'Parada de emergencia por construcción en la calle principal',
+        creadoPor: 'Olvaldo Carbonell Rangel',
+        rolCreador: 'conductor',
+        createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // hace 5 horas
+        expiraAt: new Date(Date.now() + 19 * 60 * 60 * 1000).toISOString(), // expira en 19 horas
+        estado: 'pendiente'
+      }
+    ],
     estado: 'activa',
     createdAt: '2024-01-20'
   },
@@ -348,6 +395,51 @@ export const historialRutas: HistorialRuta[] = [
   },
 ];
 
+// Helper functions para actualizar paradas temporales
+export const aprobarParadaTemporal = (rutaId: string, paradaId: string, aprobadoPor: string): boolean => {
+  const ruta = rutas.find(r => r.id === rutaId);
+  if (!ruta || !ruta.paradasTemporales) return false;
+
+  const parada = ruta.paradasTemporales.find(p => p.id === paradaId);
+  if (!parada) return false;
+
+  // Actualizar estado de la parada
+  parada.estado = 'aprobada';
+  parada.aprobadoPor = aprobadoPor;
+  parada.fechaAprobacion = new Date().toISOString();
+
+  // Buscar el estudiante en la lista global
+  const estudiante = estudiantes.find(e => e.id === parada.estudianteId);
+
+  if (estudiante) {
+    // Actualizar la dirección del estudiante con la nueva parada aprobada
+    estudiante.direccion = parada.direccion;
+    estudiante.lat = parada.lat;
+    estudiante.lng = parada.lng;
+
+    // Si el estudiante no está en la ruta, agregarlo
+    if (!ruta.estudiantes.includes(parada.estudianteId)) {
+      ruta.estudiantes.push(parada.estudianteId);
+      estudiante.asignado = true;
+    }
+  }
+
+  return true;
+};
+
+export const rechazarParadaTemporal = (rutaId: string, paradaId: string, aprobadoPor: string): boolean => {
+  const ruta = rutas.find(r => r.id === rutaId);
+  if (!ruta || !ruta.paradasTemporales) return false;
+
+  const parada = ruta.paradasTemporales.find(p => p.id === paradaId);
+  if (!parada) return false;
+
+  parada.estado = 'rechazada';
+  parada.aprobadoPor = aprobadoPor;
+  parada.fechaAprobacion = new Date().toISOString();
+  return true;
+};
+
 // Simulated API responses
 export const apiResponses = {
   getBuses: () => Promise.resolve({ success: true, data: buses }),
@@ -405,5 +497,15 @@ export const apiResponses = {
     };
     buses.push(newBus);
     return Promise.resolve({ success: true, data: newBus });
+  },
+
+  aprobarParadaTemporal: (rutaId: string, paradaId: string, aprobadoPor: string) => {
+    const result = aprobarParadaTemporal(rutaId, paradaId, aprobadoPor);
+    return Promise.resolve({ success: result });
+  },
+
+  rechazarParadaTemporal: (rutaId: string, paradaId: string, aprobadoPor: string) => {
+    const result = rechazarParadaTemporal(rutaId, paradaId, aprobadoPor);
+    return Promise.resolve({ success: result });
   },
 };

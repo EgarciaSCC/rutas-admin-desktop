@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Plus, Bus, Users, MapPin, MoreHorizontal, Pencil, Trash2,
   LayoutGrid, List, Grid3X3, Search, Filter, X, Map, LayoutList,
-  Eye, Bell, BarChart3, ClipboardCheck
+  Eye, Bell, BarChart3, ClipboardCheck, MapPinPlus, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -30,7 +31,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { rutas, buses, conductores, sedes, novedades, Ruta } from "@/services/mockData";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Ruta, Bus as BusType, Conductor, Sede, Novedad } from "@/services/types";
+import apiClient, { fallbackGetBuses, fallbackGetConductores, fallbackGetSedes, fallbackGetRutas, fallbackGetNovedades } from "@/services/apiClient";
 import RutasMapView from "@/components/rutas/RutasMapView";
 import ActionCard from "@/components/rutas/ActionCard";
 import VerRutaDialog from "@/components/rutas/VerRutaDialog";
@@ -41,14 +44,19 @@ type ViewMode = 'compact' | 'expanded' | 'list';
 type MainView = 'list' | 'map';
 
 const RutasList = () => {
-  const navigate = useNavigate();
-  const [rutasList] = useState<Ruta[]>(rutas);
-  const [mainView, setMainView] = useState<MainView>('list');
-  const [viewMode, setViewMode] = useState<ViewMode>('compact');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterEstado, setFilterEstado] = useState<string>('todos');
-  const [filterSede, setFilterSede] = useState<string>('todas');
-  
+   const navigate = useNavigate();
+   const [rutasList, setRutasList] = useState<Ruta[]>([]);
+   const [refreshKey, setRefreshKey] = useState(0);
+   const [buses, setBuses] = useState<BusType[]>([]);
+   const [conductores, setConductores] = useState<Conductor[]>([]);
+   const [sedes, setSedes] = useState<Sede[]>([]);
+   const [novedades, setNovedades] = useState<Novedad[]>([]);
+   const [mainView, setMainView] = useState<MainView>('list');
+   const [viewMode, setViewMode] = useState<ViewMode>('compact');
+   const [searchQuery, setSearchQuery] = useState('');
+   const [filterEstado, setFilterEstado] = useState<string>('todos');
+   const [filterSede, setFilterSede] = useState<string>('todas');
+
   // Dialog states
   const [selectedRutaForView, setSelectedRutaForView] = useState<Ruta | null>(null);
   const [showNovedadDialog, setShowNovedadDialog] = useState(false);
@@ -57,9 +65,39 @@ const RutasList = () => {
   // Count pending approvals
   const pendingApprovals = novedades.filter(n => n.requiereAprobacion && n.estadoAprobacion === 'pendiente').length;
 
+  // Count routes with pending temporary stops
+  const rutasConParadasPendientes = rutasList.filter(r =>
+    r.paradasTemporales?.some(p => p.estado === 'pendiente')
+  ).length;
+
+
+  useEffect(() => {
+    // load initial data in parallel with fallback to mocks
+    (async () => {
+      const [rutasRes, busesRes, condRes, sedesRes, novRes] = await Promise.all([
+        fallbackGetRutas(),
+        fallbackGetBuses(),
+        fallbackGetConductores(),
+        fallbackGetSedes(),
+        fallbackGetNovedades(),
+      ]);
+      if (rutasRes.success && rutasRes.data) setRutasList(rutasRes.data);
+      if (busesRes.success && busesRes.data) setBuses(busesRes.data);
+      if (condRes.success && condRes.data) setConductores(condRes.data);
+      if (sedesRes.success && sedesRes.data) setSedes(sedesRes.data);
+      if (novRes.success && novRes.data) setNovedades(novRes.data);
+    })();
+  }, []);
+
   const getBusInfo = (busId: string) => buses.find((b) => b.id === busId);
   const getConductorNombre = (conductorId: string) => conductores.find((c) => c.id === conductorId)?.nombre || "Sin asignar";
   const getSedeNombre = (sedeId: string) => sedes.find((s) => s.id === sedeId)?.nombre || "Sin asignar";
+
+  const tieneParadasTemporalesPendientes = (ruta: Ruta) =>
+    ruta.paradasTemporales?.some(p => p.estado === 'pendiente') || false;
+
+  const getParadasTemporalesPendientes = (ruta: Ruta) =>
+    ruta.paradasTemporales?.filter(p => p.estado === 'pendiente') || [];
 
   const filteredRutas = useMemo(() => {
     return rutasList.filter(ruta => {
@@ -80,42 +118,66 @@ const RutasList = () => {
 
   const hasActiveFilters = searchQuery || filterEstado !== 'todos' || filterSede !== 'todas';
 
-  const renderCompactCard = (ruta: Ruta) => (
-    <Card key={ruta.id} className="border-border hover:shadow-md transition-shadow duration-200">
-      <CardHeader className="flex flex-row items-start justify-between pb-1 pt-2 px-2.5">
-        <div>
-          <CardTitle className="text-sm font-semibold text-foreground">{ruta.nombre}</CardTitle>
-          <Badge variant={ruta.estado === "activa" ? "default" : "secondary"} className="mt-0.5 text-[10px] h-4">
-            {ruta.estado === "activa" ? "Activa" : "Inactiva"}
-          </Badge>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <MoreHorizontal className="w-3 h-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem className="gap-2 text-xs" onClick={() => setSelectedRutaForView(ruta)}>
-              <Eye className="w-3 h-3" />Ver Ruta
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 text-xs"><Pencil className="w-3 h-3" />Editar</DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 text-xs text-destructive"><Trash2 className="w-3 h-3" />Eliminar</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </CardHeader>
-      <CardContent className="pt-1 pb-2 px-2.5 space-y-1 text-xs">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <MapPin className="w-3 h-3" />
-          <span className="truncate">{getSedeNombre(ruta.sedeId)}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <Users className="w-3 h-3" />
-          <span className="truncate">{getConductorNombre(ruta.conductorId)}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const renderCompactCard = (ruta: Ruta) => {
+    const tieneParadas = tieneParadasTemporalesPendientes(ruta);
+    return (
+      <Card key={ruta.id} className={`border-border hover:shadow-md transition-shadow duration-200 ${tieneParadas ? 'ring-2 ring-warning/50' : ''}`}>
+        <CardHeader className="flex flex-row items-start justify-between pb-1 pt-2 px-2.5">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm font-semibold text-foreground">{ruta.nombre}</CardTitle>
+              {tieneParadas && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                    </TooltipTrigger>
+                    <TooltipContent><p>Parada temporal pendiente</p></TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+            <Badge variant={ruta.estado === "activa" ? "default" : "secondary"} className="mt-0.5 text-[10px] h-4">
+              {ruta.estado === "activa" ? "Activa" : "Inactiva"}
+            </Badge>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <MoreHorizontal className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem className="gap-2 text-xs" onClick={() => setSelectedRutaForView(ruta)}>
+                <Eye className="w-3 h-3" />Ver Ruta
+              </DropdownMenuItem>
+              {tieneParadas && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="gap-2 text-xs text-warning" onClick={() => setSelectedRutaForView(ruta)}>
+                    <MapPinPlus className="w-3 h-3" />Parada temporal ({getParadasTemporalesPendientes(ruta).length})
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2 text-xs"><Pencil className="w-3 h-3" />Editar</DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 text-xs text-destructive"><Trash2 className="w-3 h-3" />Eliminar</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </CardHeader>
+        <CardContent className="pt-1 pb-2 px-2.5 space-y-1 text-xs">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <MapPin className="w-3 h-3" />
+            <span className="truncate">{getSedeNombre(ruta.sedeId)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Users className="w-3 h-3" />
+            <span className="truncate">{getConductorNombre(ruta.conductorId)}</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderExpandedCard = (ruta: Ruta) => {
     const bus = getBusInfo(ruta.busId);
@@ -138,7 +200,7 @@ const RutasList = () => {
               <DropdownMenuItem className="gap-2 text-xs" onClick={() => setSelectedRutaForView(ruta)}>
                 <Eye className="w-3 h-3" />Ver Ruta
               </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 text-xs"><Pencil className="w-3 h-3" />Editar</DropdownMenuItem>
+              <DropdownMenuItem className="gap-2 text-xs" onClick={() => navigate(`/rutas/editar/${ruta.id}`)}><Pencil className="w-3 h-3" />Editar</DropdownMenuItem>
               <DropdownMenuItem className="gap-2 text-xs text-destructive"><Trash2 className="w-3 h-3" />Eliminar</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -202,7 +264,7 @@ const RutasList = () => {
                       <DropdownMenuItem className="gap-2 text-xs" onClick={() => setSelectedRutaForView(ruta)}>
                         <Eye className="w-3 h-3" />Ver Ruta
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2 text-xs"><Pencil className="w-3 h-3" />Editar</DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2 text-xs" onClick={() => navigate(`/rutas/editar/${ruta.id}`)}><Pencil className="w-3 h-3" />Editar</DropdownMenuItem>
                       <DropdownMenuItem className="gap-2 text-xs text-destructive"><Trash2 className="w-3 h-3" />Eliminar</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -382,7 +444,15 @@ const RutasList = () => {
       )}
 
       {/* Dialogs */}
-      <VerRutaDialog ruta={selectedRutaForView} open={!!selectedRutaForView} onOpenChange={(open) => !open && setSelectedRutaForView(null)} />
+            <VerRutaDialog
+              ruta={selectedRutaForView}
+              open={!!selectedRutaForView}
+              onOpenChange={(open) => !open && setSelectedRutaForView(null)}
+              onParadaUpdated={() => {
+                setRefreshKey(prev => prev + 1);
+                setRutasList([...rutas]);
+              }}
+            />
       <CrearNovedadDialog rutas={rutasList} open={showNovedadDialog} onOpenChange={setShowNovedadDialog} />
       <ReportesDialog open={showReportesDialog} onOpenChange={setShowReportesDialog} />
     </div>

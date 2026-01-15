@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { novedades as novedadesData, rutas, Novedad } from "@/services/mockData";
+import { Novedad, Ruta } from "@/services/types";
+import { fallbackGetNovedades, fallbackGetRutas } from "@/services/apiClient";
 import { useToast } from "@/hooks/use-toast";
 import NovedadDetalleModal from "@/components/rutas/NovedadDetalleModal";
 
@@ -30,9 +31,18 @@ const GestionNovedades = () => {
   const [filterCategoria, setFilterCategoria] = useState<string>("todas");
   const [filterTipo, setFilterTipo] = useState<string>("todos");
   const [selectedNovedad, setSelectedNovedad] = useState<Novedad | null>(null);
-  const [novedadesList, setNovedadesList] = useState<Novedad[]>(novedadesData);
+  const [novedadesList, setNovedadesList] = useState<Novedad[]>([]);
+  const [rutasList, setRutasList] = useState<Ruta[]>([]);
 
-  const getRutaNombre = (rutaId: string) => rutas.find(r => r.id === rutaId)?.nombre || "Ruta desconocida";
+  useEffect(() => {
+    (async () => {
+      const [novRes, rutasRes] = await Promise.all([fallbackGetNovedades(), fallbackGetRutas()]);
+      if (novRes.success && novRes.data) setNovedadesList(novRes.data);
+      if (rutasRes.success && rutasRes.data) setRutasList(rutasRes.data);
+    })();
+  }, []);
+
+  const getRutaNombre = (rutaId: string) => rutasList.find(r => r.id === rutaId)?.nombre || "Ruta desconocida";
 
   const pendientes = useMemo(() => 
     novedadesList.filter(n => n.requiereAprobacion && n.estadoAprobacion === 'pendiente'),
@@ -119,49 +129,58 @@ const GestionNovedades = () => {
   };
 
   const exportarReporte = () => {
-    const resumen = {
-      totalNovedades: novedadesList.length,
-      pendientes: pendientes.length,
-      aprobadas: procesadas.filter(n => n.estadoAprobacion === 'aprobada').length,
-      rechazadas: procesadas.filter(n => n.estadoAprobacion === 'rechazada').length,
-      informativas: informativas.length,
-      porCategoria: {
-        cancelacionRuta: novedadesList.filter(n => n.categoria === 'cancelacion_ruta').length,
-        cancelacionParada: novedadesList.filter(n => n.categoria === 'cancelacion_parada').length,
-        cambioHorario: novedadesList.filter(n => n.categoria === 'cambio_horario').length,
-        incidente: novedadesList.filter(n => n.categoria === 'incidente').length,
-        otro: novedadesList.filter(n => n.categoria === 'otro').length,
-      },
-      porTipo: {
-        urgente: novedadesList.filter(n => n.tipo === 'urgente').length,
-        alerta: novedadesList.filter(n => n.tipo === 'alerta').length,
-        info: novedadesList.filter(n => n.tipo === 'info').length,
-      },
-      porRol: {
-        coordinador: novedadesList.filter(n => n.rolCreador === 'coordinador').length,
-        padre: novedadesList.filter(n => n.rolCreador === 'padre').length,
-        administrador: novedadesList.filter(n => n.rolCreador === 'administrador').length,
-      }
-    };
+    // Encabezados del Excel
+    const headers = [
+      'ID',
+      'Título',
+      'Mensaje',
+      'Ruta',
+      'Categoría',
+      'Tipo',
+      'Requiere Aprobación',
+      'Estado',
+      'Creado Por',
+      'Rol Creador',
+      'Fecha Creación',
+      'Aprobado Por',
+      'Fecha Aprobación',
+      'Comentario Aprobación'
+    ];
 
-    const reporteData = {
-      fechaGeneracion: new Date().toISOString(),
-      resumen,
-      novedades: novedadesList.map(n => ({
-        ...n,
-        rutaNombre: getRutaNombre(n.rutaId),
-      }))
-    };
+    // Convertir datos a filas
+    const rows = novedadesList.map(n => [
+      n.id,
+      n.titulo,
+      n.mensaje.replace(/"/g, '""'), // Escapar comillas
+      getRutaNombre(n.rutaId),
+      getCategoriaLabel(n.categoria),
+      n.tipo,
+      n.requiereAprobacion ? 'Sí' : 'No',
+      n.estadoAprobacion || 'N/A',
+      n.creadoPor,
+      n.rolCreador,
+      format(new Date(n.createdAt), "dd/MM/yyyy HH:mm", { locale: es }),
+      n.aprobadoPor || '',
+      n.fechaAprobacion ? format(new Date(n.fechaAprobacion), "dd/MM/yyyy HH:mm", { locale: es }) : '',
+      n.comentarioAprobacion || ''
+    ]);
 
-    const blob = new Blob([JSON.stringify(reporteData, null, 2)], { type: 'application/json' });
+    // Crear contenido CSV con BOM para Excel
+    const BOM = '\uFEFF';
+    const csvContent = [
+      BOM + headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reporte-novedades-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    a.download = `reporte-novedades-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
-    toast({ title: "Reporte exportado", description: "El reporte de novedades ha sido descargado." });
+    toast({ title: "Reporte exportado", description: "El reporte se ha descargado. Ábrelo con Excel." });
   };
 
   const renderNovedadCard = (novedad: Novedad) => (

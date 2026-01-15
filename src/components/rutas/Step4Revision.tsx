@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   Route
 } from "lucide-react";
-import { Bus as BusType, Conductor, Coordinador, Sede, Estudiante } from "@/services/mockData";
+import { Bus as BusType, Conductor, Coordinador, Sede, Estudiante } from "@/services/types";
 import RouteMapPreview from "./RouteMapPreview";
 
 interface Step4RevisionProps {
@@ -34,6 +34,7 @@ interface Step4RevisionProps {
   estudiantes: Estudiante[];
   onBack: () => void;
   onFinish: () => void;
+  isEditing?: boolean;
 }
 
 const Step4Revision = ({
@@ -45,6 +46,7 @@ const Step4Revision = ({
   estudiantes,
   onBack,
   onFinish,
+  isEditing = false,
 }: Step4RevisionProps) => {
   const selectedBus = buses.find(b => b.id === formData.busId);
   const selectedSede = sedes.find(s => s.id === formData.sedeId);
@@ -72,7 +74,9 @@ const Step4Revision = ({
           </div>
           <div>
             <h2 className="text-lg md:text-xl font-bold text-foreground">Revisión Final</h2>
-            <p className="text-sm text-muted-foreground">Verifica la información antes de crear la ruta</p>
+            <p className="text-sm text-muted-foreground">
+              Verifica la información antes de {isEditing ? 'guardar los cambios' : 'crear la ruta'}
+            </p>
           </div>
         </div>
       </div>
@@ -291,7 +295,7 @@ const Step4Revision = ({
           onClick={onFinish}
           className="px-8 h-11 rounded-full bg-primary hover:bg-primary/90 w-full sm:w-auto"
         >
-          Crear Ruta
+          {isEditing ? 'Guardar Cambios' : 'Crear Ruta'}
         </Button>
       </div>
     </div>

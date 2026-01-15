@@ -1,8 +1,6 @@
-import { useState, useRef } from 'react';
-import { 
-  rutas, historialRutas, novedades, 
-  conductores, buses 
-} from '@/services/mockData';
+import { useState, useRef, useEffect } from 'react';
+import { Ruta, HistorialRuta, Novedad, Conductor, Bus } from '@/services/types';
+import apiClient from '@/services/apiClient';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +49,28 @@ const ReportesDialog = ({ open, onOpenChange }: ReportesDialogProps) => {
   const [selectedRuta, setSelectedRuta] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
   const chartsRef = useRef<HTMLDivElement>(null);
+  const [rutas, setRutas] = useState<Ruta[]>([]);
+  const [historialRutas, setHistorialRutas] = useState<HistorialRuta[]>([]);
+  const [novedades, setNovedades] = useState<Novedad[]>([]);
+  const [conductores, setConductores] = useState<Conductor[]>([]);
+  const [buses, setBuses] = useState<Bus[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const [rRes, hRes, nRes, cRes, bRes] = await Promise.all([
+        apiClient.fallbackGetRutas(),
+        apiClient.fallbackGetHistorial(),
+        apiClient.fallbackGetNovedades(),
+        apiClient.fallbackGetConductores(),
+        apiClient.fallbackGetBuses(),
+      ]);
+      if (rRes.success && rRes.data) setRutas(rRes.data);
+      if (hRes.success && hRes.data) setHistorialRutas(hRes.data);
+      if (nRes.success && nRes.data) setNovedades(nRes.data);
+      if (cRes.success && cRes.data) setConductores(cRes.data);
+      if (bRes.success && bRes.data) setBuses(bRes.data);
+    })();
+  }, []);
 
   const filteredHistorial = selectedRuta === 'all' 
     ? historialRutas 

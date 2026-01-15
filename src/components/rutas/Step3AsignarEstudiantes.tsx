@@ -7,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Estudiante, Sede } from "@/services/mockData";
+import { Estudiante, Sede } from "@/services/types";
 import RouteMapPreview from "./RouteMapPreview";
 
 interface Step3FormProps {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { rutas, estudiantes, Novedad } from "@/services/mockData";
+import { Novedad, Ruta, Estudiante } from "@/services/types";
+import { fallbackGetRutas, fallbackGetEstudiantes } from "@/services/apiClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface NovedadDetalleModalProps {
@@ -29,13 +30,23 @@ const NovedadDetalleModal = ({ novedad, open, onOpenChange, onAprobar, onRechaza
   const { toast } = useToast();
   const [showRejectField, setShowRejectField] = useState(false);
   const [comentario, setComentario] = useState("");
+  const [rutasList, setRutasList] = useState<Ruta[]>([]);
+  const [estudiantesList, setEstudiantesList] = useState<Estudiante[]>([]);
 
   if (!novedad) return null;
 
-  const getRutaNombre = (rutaId: string) => rutas.find(r => r.id === rutaId)?.nombre || "Ruta desconocida";
+  useEffect(() => {
+    (async () => {
+      const [rutasRes, estRes] = await Promise.all([fallbackGetRutas(), fallbackGetEstudiantes()]);
+      if (rutasRes.success && rutasRes.data) setRutasList(rutasRes.data);
+      if (estRes.success && estRes.data) setEstudiantesList(estRes.data);
+    })();
+  }, []);
+
+  const getRutaNombre = (rutaId: string) => rutasList.find(r => r.id === rutaId)?.nombre || "Ruta desconocida";
   const getEstudianteNombre = (estudianteId?: string) => {
     if (!estudianteId) return null;
-    return estudiantes.find(e => e.id === estudianteId)?.nombre || null;
+    return estudiantesList.find(e => e.id === estudianteId)?.nombre || null;
   };
 
   const getCategoriaLabel = (categoria: string) => {

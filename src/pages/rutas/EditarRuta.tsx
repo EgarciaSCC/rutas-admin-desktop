@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import Stepper from "@/components/rutas/Stepper";
@@ -8,8 +8,18 @@ import Step1DatosRuta from "@/components/rutas/Step1DatosRuta";
 import Step2AsignarResponsables from "@/components/rutas/Step2AsignarResponsables";
 import Step3AsignarEstudiantes from "@/components/rutas/Step3AsignarEstudiantes";
 import Step4Revision from "@/components/rutas/Step4Revision";
-import { Conductor, Coordinador, Bus as BusType, Sede, Estudiante, Ruta } from "@/services/types";
-import apiClient, { fallbackGetBuses, fallbackGetConductores, fallbackGetCoordinadores, fallbackGetSedes, fallbackGetEstudiantes } from "@/services/apiClient";
+import {
+  buses,
+  conductores,
+  coordinadores,
+  sedes,
+  estudiantes,
+  rutas,
+  Conductor,
+  Coordinador,
+  Bus,
+  apiResponses,
+} from "@/services/mockData";
 
 const steps = [
   { number: 1, label: "Datos de la ruta" },
@@ -18,15 +28,15 @@ const steps = [
   { number: 4, label: "Revisión" },
 ];
 
-const CrearRuta = () => {
+const EditarRuta = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
-  const [conductoresList, setConductoresList] = useState<Conductor[]>([]);
-  const [coordinadoresList, setCoordinadoresList] = useState<Coordinador[]>([]);
-  const [busesList, setBusesList] = useState<BusType[]>([]);
-  const [sedes, setSedes] = useState<Sede[]>([]);
-  const [estudiantesList, setEstudiantesList] = useState<Estudiante[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [conductoresList, setConductoresList] = useState(conductores);
+  const [coordinadoresList, setCoordinadoresList] = useState(coordinadores);
+  const [busesList, setBusesList] = useState(buses);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -38,22 +48,28 @@ const CrearRuta = () => {
     estudiantesIds: [] as string[],
   });
 
+  // Load existing route data
   useEffect(() => {
-    (async () => {
-      const [busesRes, condRes, coordRes, sedesRes, estRes] = await Promise.all([
-        fallbackGetBuses(),
-        fallbackGetConductores(),
-        fallbackGetCoordinadores(),
-        fallbackGetSedes(),
-        fallbackGetEstudiantes(),
-      ]);
-      if (busesRes.success && busesRes.data) setBusesList(busesRes.data);
-      if (condRes.success && condRes.data) setConductoresList(condRes.data);
-      if (coordRes.success && coordRes.data) setCoordinadoresList(coordRes.data as any);
-      if (sedesRes.success && sedesRes.data) setSedes(sedesRes.data);
-      if (estRes.success && estRes.data) setEstudiantesList(estRes.data);
-    })();
-  }, []);
+    const ruta = rutas.find((r) => r.id === id);
+    if (ruta) {
+      setFormData({
+        nombreRuta: ruta.nombre,
+        busId: ruta.busId,
+        sedeId: ruta.sedeId,
+        conductorId: ruta.conductorId,
+        coordinadorId: ruta.coordinadorId,
+        estudiantesIds: [...ruta.estudiantes],
+      });
+    } else {
+      toast({
+        title: "Ruta no encontrada",
+        description: "La ruta que intentas editar no existe.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+    setIsLoading(false);
+  }, [id, navigate, toast]);
 
   // Get bus capacity
   const selectedBus = busesList.find((b) => b.id === formData.busId);
@@ -67,59 +83,53 @@ const CrearRuta = () => {
   };
 
   const handleCreateConductor = async (newConductor: Omit<Conductor, "id">) => {
-    const result = await apiClient.createConductor(newConductor);
-    if (result.success && result.data) {
+    const result = await apiResponses.createConductor(newConductor);
+    if (result.success) {
       setConductoresList((prev) => [...prev, result.data]);
-      setFormData((prev) => ({ ...prev, conductorId: result.data!.id }));
+      setFormData((prev) => ({ ...prev, conductorId: result.data.id }));
       toast({
         title: "Conductor creado",
         description: `${result.data.nombre} ha sido agregado exitosamente.`,
       });
-    } else {
-      toast({ title: "Error", description: result.error || 'No se pudo crear el conductor' });
     }
   };
 
   const handleCreateCoordinador = async (newCoordinador: Omit<Coordinador, "id">) => {
-    const result = await apiClient.createCoordinador(newCoordinador);
-    if (result.success && result.data) {
+    const result = await apiResponses.createCoordinador(newCoordinador);
+    if (result.success) {
       setCoordinadoresList((prev) => [...prev, result.data]);
-      setFormData((prev) => ({ ...prev, coordinadorId: result.data!.id }));
+      setFormData((prev) => ({ ...prev, coordinadorId: result.data.id }));
       toast({
         title: "Coordinador/a creado",
         description: `${result.data.nombre} ha sido agregado/a exitosamente.`,
       });
-    } else {
-      toast({ title: "Error", description: result.error || 'No se pudo crear el coordinador' });
     }
   };
 
-  const handleCreateBus = async (newBus: Omit<BusType, "id">) => {
-    const result = await apiClient.createBus(newBus);
-    if (result.success && result.data) {
+  const handleCreateBus = async (newBus: Omit<Bus, "id">) => {
+    const result = await apiResponses.createBus(newBus);
+    if (result.success) {
       setBusesList((prev) => [...prev, result.data]);
-      setFormData((prev) => ({ ...prev, busId: result.data!.id }));
+      setFormData((prev) => ({ ...prev, busId: result.data.id }));
       toast({
         title: "Bus registrado",
         description: `El bus ${result.data.placa} ha sido registrado exitosamente.`,
       });
-    } else {
-      toast({ title: "Error", description: result.error || 'No se pudo crear el bus' });
     }
   };
 
-  const handleToggleEstudiante = (id: string) => {
+  const handleToggleEstudiante = (estId: string) => {
     setFormData((prev) => {
-      const isAsignado = prev.estudiantesIds.includes(id);
+      const isAsignado = prev.estudiantesIds.includes(estId);
       if (isAsignado) {
         return {
           ...prev,
-          estudiantesIds: prev.estudiantesIds.filter((eid) => eid !== id),
+          estudiantesIds: prev.estudiantesIds.filter((eid) => eid !== estId),
         };
       } else if (prev.estudiantesIds.length < capacidad) {
         return {
           ...prev,
-          estudiantesIds: [...prev.estudiantesIds, id],
+          estudiantesIds: [...prev.estudiantesIds, estId],
         };
       }
       return prev;
@@ -127,30 +137,38 @@ const CrearRuta = () => {
   };
 
   const handleFinish = async () => {
-    const result = await apiClient.createRuta({
-      nombre: formData.nombreRuta,
-      busId: formData.busId,
-      conductorId: formData.conductorId,
-      coordinadorId: formData.coordinadorId,
-      sedeId: formData.sedeId,
-      estudiantes: formData.estudiantesIds,
-      estado: "activa",
-    });
+    // Update route in mock data
+    const rutaIndex = rutas.findIndex((r) => r.id === id);
+    if (rutaIndex !== -1) {
+      rutas[rutaIndex] = {
+        ...rutas[rutaIndex],
+        nombre: formData.nombreRuta,
+        busId: formData.busId,
+        conductorId: formData.conductorId,
+        coordinadorId: formData.coordinadorId,
+        sedeId: formData.sedeId,
+        estudiantes: formData.estudiantesIds,
+      };
 
-    if (result.success) {
       toast({
-        title: "Ruta creada exitosamente",
-        description: `La ruta "${formData.nombreRuta}" ha sido creada.`,
+        title: "Ruta actualizada exitosamente",
+        description: `La ruta "${formData.nombreRuta}" ha sido actualizada.`,
       });
       navigate("/");
-    } else {
-      toast({ title: "Error", description: result.error || 'No se pudo crear la ruta' });
     }
   };
 
   const handleSkip = () => {
     handleFinish();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto">
@@ -165,10 +183,10 @@ const CrearRuta = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-lg md:text-xl font-semibold text-foreground">Crear ruta</h1>
+          <h1 className="text-lg md:text-xl font-semibold text-foreground">Editar ruta</h1>
         </div>
         <div className="hidden sm:block text-sm text-muted-foreground">
-          Rutas / <span className="text-foreground">Crear ruta</span>
+          Rutas / <span className="text-foreground">Editar ruta</span>
         </div>
       </div>
 
@@ -198,8 +216,8 @@ const CrearRuta = () => {
             coordinadores={coordinadoresList}
             selectedConductorId={formData.conductorId}
             selectedCoordinadorId={formData.coordinadorId}
-            onConductorChange={(id) => handleFormDataChange({ conductorId: id })}
-            onCoordinadorChange={(id) => handleFormDataChange({ coordinadorId: id })}
+            onConductorChange={(conductorId) => handleFormDataChange({ conductorId })}
+            onCoordinadorChange={(coordinadorId) => handleFormDataChange({ coordinadorId })}
             onCreateConductor={handleCreateConductor}
             onCreateCoordinador={handleCreateCoordinador}
             onNext={() => setCurrentStep(3)}
@@ -209,7 +227,7 @@ const CrearRuta = () => {
 
         {currentStep === 3 && (
           <Step3AsignarEstudiantes
-            estudiantes={estudiantesList}
+            estudiantes={estudiantes}
             asignados={formData.estudiantesIds}
             capacidad={capacidad}
             sede={selectedSede}
@@ -227,9 +245,10 @@ const CrearRuta = () => {
             sedes={sedes}
             conductores={conductoresList}
             coordinadores={coordinadoresList}
-            estudiantes={estudiantesList}
+            estudiantes={estudiantes}
             onBack={() => setCurrentStep(3)}
             onFinish={handleFinish}
+            isEditing
           />
         )}
       </div>
@@ -237,4 +256,4 @@ const CrearRuta = () => {
   );
 };
 
-export default CrearRuta;
+export default EditarRuta;

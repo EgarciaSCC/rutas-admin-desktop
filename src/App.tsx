@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import RutasList from "@/pages/rutas/RutasList";
 import CrearRuta from "@/pages/rutas/CrearRuta";
+import EditarRuta from "@/pages/rutas/EditarRuta";
 import GestionNovedades from "@/pages/rutas/GestionNovedades";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,14 @@ const App = () => (
             element={
               <AdminLayout>
                 <CrearRuta />
+              </AdminLayout>
+            }
+          />
+          <Route
+            path="/rutas/editar/:id"
+            element={
+              <AdminLayout>
+                <EditarRuta />
               </AdminLayout>
             }
           />
